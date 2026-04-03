@@ -6,82 +6,47 @@
   let history = [];
   let finished = false;
 
-  const TOTAL = 32;
-  const GROUPS = [8, 4, 4, 4, 12];
+  let input = '';
 
-  let chars = Array(TOTAL).fill('');
-  let inputs = [];
+  const GROUPS = [8, 4, 4, 4, 12];
+  const TOTAL = 32;
 
   onMount(() => {
     target = generateUUID().toUpperCase();
     console.log('Target UUID:', target);
   });
 
-  function getFlatValue() {
-    return chars.join('');
+  function normalize(value) {
+    return value.toUpperCase().replace(/[^A-F0-9]/g, '').slice(0, TOTAL);
   }
 
-  function handleInput(e, i) {
-    let val = e.target.value.toUpperCase();
-
-    // strip non-hex + dashes
-    val = val.replace(/[^A-F0-9]/g, '');
-
-    if (!val) {
-      chars[i] = '';
-      return;
-    }
-
-    // handle paste / multi-char
-    for (let j = 0; j < val.length && i + j < TOTAL; j++) {
-      chars[i + j] = val[j];
-    }
-
-    moveCursor(i + val.length);
+  function handleInput(e) {
+    input = normalize(e.target.value);
   }
 
-  function handleKey(e, i) {
-    if (e.key === 'Backspace') {
-      if (chars[i]) {
-        chars[i] = '';
-      } else if (i > 0) {
-        moveCursor(i - 1);
-      }
-    }
-
-    if (e.key === 'ArrowLeft' && i > 0) {
-      moveCursor(i - 1);
-    }
-
-    if (e.key === 'ArrowRight' && i < TOTAL - 1) {
-      moveCursor(i + 1);
-    }
-
-    if (e.key === 'Enter') {
-      submitGuess();
-    }
-  }
-
-  function moveCursor(i) {
-    if (i < 0 || i >= TOTAL) return;
-    inputs[i]?.focus();
+  function handleKey(e) {
+    if (e.key === 'Enter') submitGuess();
   }
 
   function submitGuess() {
-    if (finished) return;
+    if (finished || input.length !== TOTAL) return;
 
-    const guess = getFlatValue();
-    if (guess.length !== TOTAL) return;
-
-    const result = evaluateGuess(guess, target);
+    const result = evaluateGuess(input, target);
     history = [...history, result];
 
-    if (guess === target) {
-      finished = true;
-    }
+    if (input === target) finished = true;
 
-    chars = Array(TOTAL).fill('');
-    moveCursor(0);
+    input = '';
+  }
+
+  function splitGroupsFromString(str) {
+    return [
+      str.slice(0, 8),
+      str.slice(8, 12),
+      str.slice(12, 16),
+      str.slice(16, 20),
+      str.slice(20)
+    ];
   }
 
   function splitGroups(row) {
@@ -95,21 +60,6 @@
       chars.slice(20)
     ];
   }
-
-	function handlePaste(e, startIndex) {
-		e.preventDefault();
-
-		let text = e.clipboardData.getData('text').toUpperCase();
-
-		// remove dashes and anything invalid
-		text = text.replace(/[^A-F0-9]/g, '');
-
-		for (let i = 0; i < text.length && startIndex + i < TOTAL; i++) {
-			chars[startIndex + i] = text[i];
-		}
-
-		moveCursor(Math.min(startIndex + text.length, TOTAL - 1));
-	}
 </script>
 
 <style>
@@ -120,16 +70,17 @@
     justify-content: center;
     flex-direction: column;
     font-family: monospace;
+    background: white;
   }
 
   .board {
-    margin-bottom: 20px;
+    margin-bottom: 24px;
   }
 
   .row {
     display: flex;
     align-items: center;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
   }
 
   .group {
@@ -137,20 +88,20 @@
   }
 
   .dash {
-    margin: 0 6px;
-    color: #888;
+    margin: 0 8px;
+    color: #aaa;
+    font-size: 22px;
   }
 
   .cell {
-    width: 24px;
-    height: 32px;
+    width: 40px;
+    height: 56px;
     display: flex;
     align-items: center;
     justify-content: center;
     font-weight: bold;
-    font-size: 16px;
-    border-radius: 4px;
-    margin-right: 2px;
+    font-size: 22px;
+    background: #eee;
   }
 
   .correct {
@@ -168,18 +119,35 @@
     color: white;
   }
 
-  .input-row {
-    display: flex;
-    align-items: center;
+  .input-wrapper {
+    position: relative;
   }
 
-  .char-input {
-    width: 24px;
-    height: 32px;
-    text-align: center;
-    font-size: 16px;
-    margin-right: 2px;
-    text-transform: uppercase;
+  .real-input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .fake-input {
+    display: flex;
+    align-items: center;
+    cursor: text;
+  }
+
+  .fake-cell {
+    width: 40px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    background: #eee;
+    color: black;
+  }
+
+  .fake-cell.active {
+    background: #ddd;
   }
 </style>
 
@@ -191,7 +159,7 @@
           <div class="group">
             {#each group as cell}
               <div class="cell {cell.status}">
-                {cell.char.toUpperCase()}
+                {cell.char}
               </div>
             {/each}
           </div>
@@ -204,30 +172,34 @@
     {/each}
   </div>
 
-  <div class="input-row">
-  {#each GROUPS as size, gi}
-    <div class="group">
-      {#each Array(size) as _, ci}
-        {@const index = GROUPS.slice(0, gi).reduce((a, b) => a + b, 0) + ci}
+  <div class="input-wrapper" on:click={() => document.getElementById('real').focus()}>
+    <input
+      id="real"
+      class="real-input"
+      bind:value={input}
+      on:input={handleInput}
+      on:keydown={handleKey}
+      disabled={finished}
+    />
 
-        <input
-					class="char-input"
-					maxlength="32"
-					bind:this={inputs[index]}
-					value={chars[index]}
-					on:input={(e) => handleInput(e, index)}
-					on:keydown={(e) => handleKey(e, index)}
-					on:paste={(e) => handlePaste(e, index)}
-					disabled={finished}
-				/>
+    <div class="fake-input">
+      {#each GROUPS as size, gi}
+        <div class="group">
+          {#each Array(size) as _, ci}
+            {@const index = GROUPS.slice(0, gi).reduce((a,b)=>a+b,0) + ci}
+
+            <div class="fake-cell {index === input.length ? 'active' : ''}">
+              {input[index] || ''}
+            </div>
+          {/each}
+        </div>
+
+        {#if gi < 4}
+          <div class="dash">-</div>
+        {/if}
       {/each}
     </div>
-
-    {#if gi < 4}
-      <div class="dash">-</div>
-		{/if}
-	{/each}
-	</div>
+  </div>
 
   {#if finished}
     <p>🎉 Correct! UUID guessed.</p>

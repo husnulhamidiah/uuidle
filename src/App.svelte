@@ -12,7 +12,7 @@
   const TOTAL = 32;
 
   onMount(() => {
-    target = generateUUID().toUpperCase();
+    target = generateUUID().toUpperCase().replace(/-/g, '');
     console.log('Target UUID:', target);
   });
 

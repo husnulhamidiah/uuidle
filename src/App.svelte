@@ -120,7 +120,11 @@
   }
 
   .input-wrapper {
-    position: relative;
+    position: sticky;
+    bottom: 0;
+    background: white;
+    padding-top: 20px;
+    padding-bottom: 50px;
   }
 
   .real-input {

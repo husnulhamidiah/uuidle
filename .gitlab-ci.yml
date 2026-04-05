@@ -1,0 +1,13 @@
+image: node:18
+
+pages:
+  stage: deploy
+  script:
+    - npm install
+    - npm run build
+    - cp public/index.html public/404.html
+  artifacts:
+    paths:
+      - public
+  only:
+    - main

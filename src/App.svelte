@@ -13,7 +13,7 @@
 
   onMount(() => {
     target = generateUUID().toUpperCase().replace(/-/g, '');
-    console.log('Target UUID:', target);
+    // console.debug('Target UUID:', target);
   });
 
   function normalize(value) {
@@ -32,21 +32,11 @@
     if (finished || input.length !== TOTAL) return;
 
     const result = evaluateGuess(input, target);
-    history = [...history, result];
+    history = [...history, result].slice(-6);
 
     if (input === target) finished = true;
 
     input = '';
-  }
-
-  function splitGroupsFromString(str) {
-    return [
-      str.slice(0, 8),
-      str.slice(8, 12),
-      str.slice(12, 16),
-      str.slice(16, 20),
-      str.slice(20)
-    ];
   }
 
   function splitGroups(row) {
@@ -120,11 +110,7 @@
   }
 
   .input-wrapper {
-    position: sticky;
-    bottom: 0;
-    background: white;
-    padding-top: 20px;
-    padding-bottom: 50px;
+    position: relative;
   }
 
   .real-input {
@@ -156,6 +142,16 @@
 </style>
 
 <div class="wrapper">
+  <div style="display: flex; flex-direction: row; gap: 24px; font-size: 18px; margin-bottom: 24px;">
+    {#if finished}
+      <p>🎉 Correct! UUID guessed.</p>
+    {:else}
+      <p><span style="color:#22c55e">█</span> correct type, correct letter</p>
+      <p><span style="color:#f59e0b">█</span> correct type, wrong letter</p>
+      <p><span style="color:#9ca3af">█</span> wrong type, wrong letter</p>
+    {/if}
+  </div>
+
   <div class="board">
     {#each history as row}
       <div class="row">
@@ -204,8 +200,4 @@
       {/each}
     </div>
   </div>
-
-  {#if finished}
-    <p>🎉 Correct! UUID guessed.</p>
-  {/if}
 </div>

@@ -142,9 +142,10 @@
 </style>
 
 <div class="wrapper">
+  <h1>Guess the UUID</h1>
   <div style="display: flex; flex-direction: row; gap: 24px; font-size: 18px; margin-bottom: 24px;">
     {#if finished}
-      <p>🎉 Correct! UUID guessed.</p>
+      <h1>🎉 Correct! UUID guessed.</h1>
     {:else}
       <p><span style="color:#22c55e">█</span> correct type, correct letter</p>
       <p><span style="color:#f59e0b">█</span> correct type, wrong letter</p>
